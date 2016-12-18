@@ -8,6 +8,7 @@ import random
 
 SHOOTRANGE = 200
 HEALRADIUS = 150
+INVTIME = 2000
 MAX_HP = 50
 SHOOTTIME = 500
 HEALTIME = 100
@@ -28,6 +29,7 @@ class Soldier:
         self.hp = MAX_HP
         self.target = None
         self.shoottimer = 200
+        self.invtime = 0 # time that the soldier is invincible after respawn
 
     def _get_color(self):
         c = float(self.hp)/MAX_HP * 255
@@ -37,6 +39,9 @@ class Soldier:
         pygame.draw.rect(SCREEN, self._get_color(), self.rect)
         if self.target is not None and self.target.hp > 0:
             pygame.draw.line(SCREEN, self.color, self.rect.topleft, self.target.rect.topleft)
+        if self.invtime > 0:
+            r = (self.rect.x - 2, self.rect.y - 2, self.rect.width + 2, self.rect.height + 2)
+            pygame.draw.rect(SCREEN, (255, 255, 255), r, 1) 
 
     def update(self, enemies, dt):
         self.shoottimer -= dt
@@ -56,11 +61,18 @@ class Soldier:
                 if dist(self.rect, ee.rect) < SHOOTRANGE:
                     self.target = ee
 
+        self.invtime -= dt
+
     def damage(self, d):
-        self.hp -= d
+        if self.invtime <= 0:
+            self.hp -= d
 
     def heal(self, h):
         self.hp = min(self.hp + h, MAX_HP)
+
+    def respawn(self):
+        self.hp = MAX_HP
+        self.invtime = INVTIME
         
 class Player(Soldier):
     def __init__(self):
@@ -177,7 +189,7 @@ def main():
                 basehp -= 1
                 if len(deadsoldiers) > 0:
                     s = deadsoldiers.pop()
-                    s.hp = MAX_HP
+                    s.respawn()
                     soldiers.append(s)
 
         enemies = [e for e in enemies if e.hp > 0]
